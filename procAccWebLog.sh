@@ -8,6 +8,7 @@ awkscr=/tmp/awk.scr
 startAccTime=""
 endAccTime=""
 sortAccFiledLoc=""
+mailFor="root"
 sendLines=5
 
 declare -a files
@@ -98,9 +99,6 @@ function generateFileList() {
    break;
   fi
 
-  
-#  files[$i]="${info[@]}"
-#  if [ -n "$lineNum" ]; then break; fi
   let i++
  done
 }
@@ -146,7 +144,7 @@ function clearEnvironment() {
 }
 
 function sendMail() {
- echo "$1" | mail -s "Web Stat" root 
+ echo "$1" | mail -s "Web Stat" $mailFor 
 }
 
 function setProcessLine() {
@@ -174,7 +172,6 @@ generateProcFile
 fillDateTime
 
 if ! [ -s $procaccfile ]; then
- echo "Nothing to process"
  sendMail "$(echo -e Nothing to process. $'\n' TimeRange: $startAccTime - $endAccTime)"
  exit 0
 fi
