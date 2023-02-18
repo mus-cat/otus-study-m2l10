@@ -1,0 +1,56 @@
+---
+- name: Cron
+  hosts: all
+  become: yes
+  gather_facts: no
+  vars:
+    ansible_python_interpreter: /usr/bin/python3.7
+
+  tasks:
+    - name: Install needed packages
+      apt:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - bsd-mailx
+
+    - name: Copy files to locations
+      copy:
+        src: "{{ item.file }}"
+        dest: "{{ item.loc }}/"
+      loop:
+        - { file: "procAccWebLog.sh", loc: "/root" }
+        - { file: "access.log.orig", loc: "/opt" }
+
+    - name: Set script permission
+      file:
+        path: "/root/procAccWebLog.sh"
+        mode: "u+rx"
+
+    - name: Make apache2 directory
+      file:
+        state: directory
+        dest: "/var/log/apache2"
+
+    - name: Clear apache2 log dir
+      shell:
+        cmd: set BASHOPTS="extglob" -r /var/log/apache2/access.log*
+
+    - name: Make right apache log file (step 1)
+      shell:
+        cmd: sed -n "{{item.start}},{{item.end}}p" /opt/access.log.orig > "/var/log/apache2/access.log{{item.ext}}"
+      loop:
+        - { start: 1, end: 200, ext: ".2" }
+        - { start: 201, end: 400, ext: ".1" }
+        - { start: 401, end: 670, ext: "" }
+
+    - name: Make right apache log file (step 2)
+      shell:
+        chdir: /var/log/apache2
+        cmd: gzip -c access.log.2 > access.log.2.gz && rm access.log.2
+
+    - name: Make cron task
+      ansible.builtin.cron:
+        minute: 1
+        job: /root/procAccWebLog.sh
+        name: Web Stat 
